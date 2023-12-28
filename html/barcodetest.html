@@ -20,16 +20,60 @@
             text-align: center;
             margin: auto;
         }
+        .btn-area {
+            margin: 0.5rem 0;
+        }
+        .camera-area {
+            background-color: #ffeeee;
+            min-height: 10rem;
+        }
+        #camera_shoot {
+            min-height: 8rem;
+        }
+        #barcode-result {
+            background-color: #eedddd;
+            height: 2rem;
+        }
+        .amazon-link {
+            background-color: lightgreen; /* テキストをグレーに */
+            min-height: 10rem;
+        }
+        .pmda-link {
+            background-color: lightblue; /* テキストをグレーに */
+            min-height: 10rem;
+        }
+        #goto_amazon.disabled-link,
+        #goto_pmda.disabled-link {
+            color: grey; /* テキストをグレーに */
+            pointer-events: none; /* クリックを無効に */
+            opacity: 0.5; /* 半透明にして無効な見た目に */
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <form id="upload-form">
+        <form id="upload-form" style="display: none;">
             <input type="file" accept="image/*" capture="camera" id="camera-input" name="image">
         </form>
-        <!-- バーコードの読み取り結果を表示するためのスペース -->
-        <span id="barcode-result"></span>
+        <div class="camera-area">
+            <div id="camera_shoot">
+                <div style="margin: auto;">
+                    <i class="fa-solid fa-camera"></i>ここをタップして、モバイル端末のカメラでバーコードの写真を撮ってください。PCからは写真を指定できます。
+                </div>
+            </div>
+            <!-- バーコードの読み取り結果を表示するためのスペース -->
+            <div id="barcode-result">
+            </div>
+        </div>
+        <div id="goto_amazon" class="btn-area amazon-link disabled-link">
+            <div class="">Amazonでバーコード検索する。</div>
+            <div id="amazon_url" class=""></div>
+        </div>
+        <div id="goto_pmda" class="btn-area pmda-link disabled-link">
+            <div class="">PMDAでGS1-128を検索する。</div>
+            <div id="pmda_url" class=""></div>
+        </div>
     </div>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
@@ -65,11 +109,35 @@
                                 readers: ["code_128_reader", "ean_reader"]
                             },
                         }, function(result) {
+                            const amazonDiv = document.getElementById('goto_amazon');
+                            const amazonUrl = document.getElementById('amazon_url');
+                            const pmdaDiv = document.getElementById('goto_pmda');
+                            const pmdaUrl = document.getElementById('pmda_url');
+
+                            amazonUrl.textContent = ``; // Amazonの検索URLにバーコードを組み込む
+                            amazonDiv.classList.add('disabled-link'); // 無効スタイルを適用
+                            pmdaUrl.textContent = ``; // PMDAの検索URLにバーコードを組み込む
+                            pmdaDiv.classList.add('disabled-link'); // 無効スタイルを適用
+
                             if(result && result.codeResult) {
                                 console.log(result.codeResult);
-                                document.getElementById('barcode-result').textContent = result.codeResult.code;
+                                var codeName = "";
+                                if (result.codeResult.format === 'ean_13') {
+                                    codeName = "（JANコード）";
+                                } else if (result.codeResult.format === 'code_128') {
+                                    codeName = "（Code128）";
+                                }
+                                document.getElementById('barcode-result').textContent = result.codeResult.code + codeName;
+
+                                if (result.codeResult.format === 'ean_13') {
+                                    amazonUrl.textContent = `https://www.amazon.co.jp/s?k=${result.codeResult.code}`; // Amazonの検索URLにバーコードを組み込む
+                                    amazonDiv.classList.remove('disabled-link'); // 無効スタイルを削除
+                                } else if (result.codeResult.format === 'code_128') {
+                                    pmdaUrl.textContent = `https://www.pmda.go.jp/PmdaSearch/iyakuSearch?gs1code=${result.codeResult.code}#gscdid`; // PMDAの検索URLにバーコードを組み込む
+                                    pmdaDiv.classList.remove('disabled-link'); // 無効スタイルを削除
+                                }
                             } else {
-                                console.error(result);
+                                //console.error(result);
                                 document.getElementById('barcode-result').textContent = "読み取りに失敗しました。";
                             }
                         });
@@ -78,6 +146,24 @@
                 };
                 reader.readAsDataURL(e.target.files[0]);
             }
+        });
+
+        $(document).ready(function() {
+            $('#camera_shoot').click(function() {
+                document.getElementById('camera-input').click(); // 隠れたinputをクリック
+            });
+            $('#goto_amazon').click(function() {
+                var url = $('#amazon_url').text();
+                if (url !== '') {
+                    window.open(url, '_blank'); // 新しいタブでリンクを開く
+                }
+            });
+            $('#goto_pmda').click(function() {
+                var url = $('#pmda_url').text();
+                if (url !== '') {
+                    window.open(url, '_blank'); // 新しいタブでリンクを開く
+                }
+            });
         });
     </script>
 </body>
