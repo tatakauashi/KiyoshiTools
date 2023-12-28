@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera & Reading Barcode Test</title>
+    <style>
+        .success {
+            color: green;
+        }
+        .failure {
+            color: red;
+        }
+        .face_image {
+            width: 96px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <form id="upload-form">
+            <input type="file" accept="image/*" capture="camera" id="camera-input" name="image">
+        </form>
+        <!-- バーコードの読み取り結果を表示するためのスペース -->
+        <span id="barcode-result"></span>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+    <script>
+        document.getElementById('camera-input').addEventListener('change', function(e) {
+            if (e.target.files && e.target.files.length) {
+                var reader = new FileReader();
+                reader.onload = function() {
+                    var img = new Image();
+                    img.onload = function() {
+                        var maxWidth = 800; // 最大幅
+                        var maxHeight = 800; // 最大高さ
+                        var canvas = document.createElement('canvas');
+                        var ctx = canvas.getContext('2d');
+
+                        // アスペクト比を保持しながらリサイズ
+                        var ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
+                        canvas.width = img.width * ratio;
+                        canvas.height = img.height * ratio;
+
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                        // QuaggaJSでバーコードを解析
+                        Quagga.decodeSingle({
+                            src: canvas.toDataURL(),
+                            numOfWorkers: 0,
+                            inputStream: {
+                                size: canvas.width
+                            },
+                            decoder: {
+                                readers: ["code_128_reader", "ean_reader"]
+                            },
+                        }, function(result) {
+                            if(result && result.codeResult) {
+                                console.log(result.codeResult);
+                                document.getElementById('barcode-result').textContent = result.codeResult.code;
+                            } else {
+                                console.error(result);
+                                document.getElementById('barcode-result').textContent = "読み取りに失敗しました。";
+                            }
+                        });
+                    };
+                    img.src = reader.result;
+                };
+                reader.readAsDataURL(e.target.files[0]);
+            }
+        });
+    </script>
+</body>
+</html>
